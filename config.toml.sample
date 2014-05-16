@@ -1,0 +1,21 @@
+# Generic Configuration
+
+[slack]
+endpoint = "https://<YOURTEAM>.slack.com/services/hooks/slackbot"
+token = "<YOUR_SLACKBOT_API>"
+accept_nicks = ["chobie"]
+
+[http]
+host = "127.0.0.1"
+port = "9898"
+
+[[servers]]
+host = "irc.freenode.net"
+port = "6667"
+nick = "slack-irc-bot"
+name = "slack-irc-bot"
+
+	[[servers.channels]]
+	channel = "#slack-irc-bot-debug"
+	slack_channel = "#debug"
+	readonly = false
