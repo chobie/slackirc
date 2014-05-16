@@ -13,7 +13,7 @@ import (
 
 const (
 	libraryVersion = "0.1"
-	userAgent = "go-slack/" + libraryVersion
+	userAgent = "go-slackic/" + libraryVersion
 )
 
 var config *configuration.Config
@@ -27,6 +27,7 @@ func SlackWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	user_name := r.FormValue("user_name")
 	room := r.FormValue("channel_name")
 	text := r.FormValue("text")
+	channel_token := r.FormValue("token")
 
 	if user_name == "" {
 		return
@@ -64,6 +65,11 @@ func SlackWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if c != nil {
+		if c.SlackChannelToken != "" && c.SlackChannelToken != channel_token {
+			fmt.Printf("channel token mismatched")
+			return
+		}
+
 		fmt.Printf("Channel: %v\n", c)
 		go s.IRC.Privmsg(c.Channel, text)
 	} else {
@@ -96,10 +102,17 @@ func forever(config *configuration.Config) {
 		func() {
 			conf := &server
 			conn := irc.IRC(server.Nick, server.Name)
+			if server.Pass != "" {
+				conn.Password = server.Pass
+			}
+
 			err := conn.Connect(fmt.Sprintf("%s:%s", server.Host, server.Port))
 			if err != nil {
 				fmt.Printf("Failed to connect: %s\n", server.Host)
 				return
+			}
+			if server.NickServePass != "" {
+				conn.SendRaw(fmt.Sprintf("/msg NickServe IDENTIFY %s %s", server.Nick, server.NickServePass))
 			}
 
 			for _, channel := range server.Channels {

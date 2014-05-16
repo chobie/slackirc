@@ -17,5 +17,6 @@ name = "slack-irc-bot"
 
 	[[servers.channels]]
 	channel = "#slack-irc-bot-debug"
-	slack_channel = "#debug"
 	readonly = false
+	slack_channel = "#debug"
+	slack_channel_token = "CHANNEL TOKEN"

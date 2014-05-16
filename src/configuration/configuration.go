@@ -10,6 +10,7 @@ import (
 type Channel struct {
 	Channel string `toml:"channel"`
 	SlackChannel string `toml:"slack_channel"`
+	SlackChannelToken string `toml:"slack_channel_token"`
 	ReadOnly bool `toml:"readonly"`
 }
 
@@ -24,6 +25,7 @@ type Server struct {
 	Nick string `toml:"nick"`
 	Name string `toml:"name"`
 	Pass string `toml:"pass"`
+	NickServePass string `toml:"nick_serve_pass"`
 	Channels []Channel `toml:"channels"`
 	IRC *irc.Connection
 }
