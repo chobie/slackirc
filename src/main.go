@@ -30,12 +30,15 @@ func SlackWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	channel_token := r.FormValue("token")
 
 	if user_name == "" {
+		fmt.Printf("user name not found")
 		return
 	}
 	if room == "" {
+		fmt.Printf("room name not found")
 		return
 	}
 	if text == "" {
+		fmt.Printf("textn ot found")
 		return
 	}
 
@@ -46,19 +49,19 @@ func SlackWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !ok {
-		fmt.Printf("not accept nick")
+		fmt.Printf("[web server] not accept nick %s\n", user_name)
 		return
 	}
 
-	for _, server := range config.Servers {
-		for _, ch := range server.Channels {
+	for j, server := range config.Servers {
+		for i, ch := range server.Channels {
 			if ch.SlackChannel == "#" + room {
 				if ch.ReadOnly {
 					return
 				}
 
-				s = &server
-				c = &ch
+				s = &config.Servers[j]
+				c = &config.Servers[j].Channels[i]
 				break
 			}
 		}
@@ -71,7 +74,8 @@ func SlackWebhookHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		fmt.Printf("Channel: %v\n", c)
-		go s.IRC.Privmsg(c.Channel, text)
+		fmt.Printf("Server: %+v\n", s)
+		s.IRC.Privmsg(c.Channel, text)
 	} else {
 		fmt.Printf("Channel mapping not found for %s\n", c)
 		return
@@ -99,8 +103,7 @@ func SendMessage(room, message string) {
 
 func forever(config *configuration.Config) {
 	for offset, server := range config.Servers {
-		func() {
-			conf := &server
+			conf := &config.Servers[offset]
 			conn := irc.IRC(server.Nick, server.Name)
 			if server.Pass != "" {
 				conn.Password = server.Pass
@@ -111,6 +114,7 @@ func forever(config *configuration.Config) {
 				fmt.Printf("Failed to connect: %s\n", server.Host)
 				return
 			}
+			config.Servers[offset].IRC = conn
 			if server.NickServePass != "" {
 				conn.SendRaw(fmt.Sprintf("/msg NickServe IDENTIFY %s %s", server.Nick, server.NickServePass))
 			}
@@ -122,6 +126,27 @@ func forever(config *configuration.Config) {
 			conn.AddCallback("PRIVMSG", func(e *irc.Event) {
 					// confからChannelを引っ張る
 					fmt.Printf("Message [%+v]\n", e.Arguments)
+					ok := false
+
+					for _, c := range conf.Channels {
+						if c.Channel == e.Arguments[0] {
+							message := fmt.Sprintf("<%s> %s", e.Nick, e.Message())
+							SendMessage(c.SlackChannel, message)
+							ok = true
+							break;
+						}
+					}
+					if !ok {
+						fmt.Printf("Room not found: %+v", conf.Channels)
+					}
+				})
+			conn.AddCallback("NOTICE", func(e *irc.Event) {
+					fmt.Printf("Message [%+v]\n", e.Arguments)
+					ok := false
+
+					if e.Arguments[0][0:1] != "#" {
+						return
+					}
 
 					for _, c := range conf.Channels {
 						if c.Channel == e.Arguments[0] {
@@ -130,10 +155,11 @@ func forever(config *configuration.Config) {
 							break;
 						}
 					}
+					if !ok {
+						fmt.Printf("Room not found: %+v", conf.Channels)
+					}
 				})
-			config.Servers[offset].IRC = conn
 			go conn.Loop()
-		}()
 	}
 }
 
