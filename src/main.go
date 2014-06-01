@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"net/http"
 	"github.com/thoj/go-ircevent"
+	"io/ioutil"
 )
 
 const (
@@ -97,6 +98,8 @@ func SendMessage(room, message string) {
 	req.Header.Set("User-Agent", userAgent)
 	client := &http.Client{}
 	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+	ioutil.ReadAll(resp.Body)
 	fmt.Println(resp)
 }
 
